@@ -11,8 +11,8 @@ serde = { version = "1.0", features = ["derive"] }
 
 # Нативные зависимости (по умолчанию)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.0", features = ["rt-multi-thread", "sync"], optional = true }
-rayon = { version = "1.10", optional = true }
+tokio = { version = "1.0", features = ["rt-multi-thread", "sync"] }
+rayon = { version = "1.10" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

@@ -1,9 +1,11 @@
 use crate::{TaskInput, TaskOutput};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub struct NativeWorkerPool {
     _size: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl NativeWorkerPool {
     pub fn new(size: usize) -> Self {
         rayon::ThreadPoolBuilder::new()
