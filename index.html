@@ -7,37 +7,27 @@
 </head>
 
 <body>
-    <h2>Unified Worker Pool Demo</h2>
+    <h2>Worker Pool Demo</h2>
     <button id="run">Run 6 Tasks via Rust WorkerPool</button>
     <pre id="output" style="background:#f8f8f8; padding:12px; margin-top:10px;"></pre>
 
     <script type="module">
-        import init, { run_task } from './pkg/worker_pool_demo.js';
+        import init from './pkg/worker_pool_demo.js';
 
         async function run() {
             await init();
 
-            // Подготовим задачи в формате TaskInput
             const tasks = Array.from({ length: 6 }, (_, i) => ({
                 id: i + 1,
                 payload: `browser-task-${i + 1}`
             }));
 
-            // Создадим пул через Rust-биндинги
-            const { WorkerPool } = await import('./pkg/worker_pool_demo.js');
-            // Но проще вызвать напрямую из JS:
-            // → Используем JS-пул, как раньше
+            // Импортируем JS-пул (Rust-пул вызывает его через wasm-bindgen)
+            const { WorkerPool } = await import('./worker_pool.js');
+            const pool = new WorkerPool('./worker.js', 3);
 
-            // Альтернатива: вызов из Rust (если экспортирован)
-            // Пока используем JS напрямую для простоты
-
-            const { WorkerPool: JsWorkerPool } = await import('./worker_pool.js');
-            const pool = new JsWorkerPool('./worker.js', 3);
-
-            console.time("Browser tasks");
             try {
                 const results = await pool.runTasksBatch(tasks);
-                console.timeEnd("Browser tasks");
                 document.getElementById('output').textContent =
                     `✅ Completed ${results.length} tasks:\n` +
                     JSON.stringify(results, null, 2);
