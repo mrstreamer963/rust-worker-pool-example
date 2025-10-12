@@ -37,6 +37,12 @@ export class WorkerPool {
         });
     }
 
+    // 🔑 НОВЫЙ МЕТОД: запуск пачки задач
+    async runTasksBatch(payloads) {
+        const promises = payloads.map(payload => this.runTask(payload));
+        return await Promise.all(promises);
+    }
+
     _schedule() {
         while (this.taskQueue.length > 0) {
             const freeWorker = this.workers.find(w => !w.busy);

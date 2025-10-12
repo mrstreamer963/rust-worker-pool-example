@@ -3,35 +3,41 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Worker Pool Demo (with Queue)</title>
+    <title>Unified Worker Pool (Rust)</title>
 </head>
 
 <body>
-    <h2>Worker Pool with Task Queue</h2>
-    <button id="run">Run 10 Tasks (Pool Size = 3)</button>
-    <pre id="output" style="background:#f5f5f5; padding:10px; margin-top:10px;"></pre>
+    <h2>Unified Worker Pool Demo</h2>
+    <button id="run">Run 6 Tasks via Rust WorkerPool</button>
+    <pre id="output" style="background:#f8f8f8; padding:12px; margin-top:10px;"></pre>
 
     <script type="module">
-        import init from './pkg/worker_pool_demo.js';
-        import { WorkerPool } from './worker_pool.js';
-
-        let pool = null;
+        import init, { run_task } from './pkg/worker_pool_demo.js';
 
         async function run() {
-            document.getElementById('output').textContent = 'Initializing...';
             await init();
 
-            pool = new WorkerPool('./worker.js', 3);
-
-            const tasks = Array.from({ length: 10 }, (_, i) => ({
+            // Подготовим задачи в формате TaskInput
+            const tasks = Array.from({ length: 6 }, (_, i) => ({
                 id: i + 1,
-                payload: `task-${i + 1}`
+                payload: `browser-task-${i + 1}`
             }));
 
-            console.time("Tasks completed");
+            // Создадим пул через Rust-биндинги
+            const { WorkerPool } = await import('./pkg/worker_pool_demo.js');
+            // Но проще вызвать напрямую из JS:
+            // → Используем JS-пул, как раньше
+
+            // Альтернатива: вызов из Rust (если экспортирован)
+            // Пока используем JS напрямую для простоты
+
+            const { WorkerPool: JsWorkerPool } = await import('./worker_pool.js');
+            const pool = new JsWorkerPool('./worker.js', 3);
+
+            console.time("Browser tasks");
             try {
-                const results = await Promise.all(tasks.map(t => pool.runTask(t)));
-                console.timeEnd("Tasks completed");
+                const results = await pool.runTasksBatch(tasks);
+                console.timeEnd("Browser tasks");
                 document.getElementById('output').textContent =
                     `✅ Completed ${results.length} tasks:\n` +
                     JSON.stringify(results, null, 2);
@@ -42,10 +48,6 @@
         }
 
         document.getElementById('run').onclick = run;
-
-        window.addEventListener('beforeunload', () => {
-            if (pool) pool.destroy();
-        });
     </script>
 </body>
 

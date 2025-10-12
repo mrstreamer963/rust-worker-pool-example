@@ -1,13 +1,13 @@
-# Worker Pool Demo (Rust + WASM + Web Workers)
+# Unified Worker Pool (Rust)
 
-Кросс-платформенный пул задач:
-- **На хосте**: использует `rayon` (настоящие потоки).
-- **В браузере**: использует пул Web Workers с очередью задач.
+Кросс-платформенный пул задач с единым async API:
+
+- **Хост**: `tokio + rayon` → настоящие потоки.
+- **Браузер**: пул Web Workers с очередью.
 
 ## Сборка
 
-### Для WASM (браузер):
+### WASM (браузер):
 ```bash
-cargo install wasm-pack
-wasm-pack build --target web --out-dir pkg
+wasm-pack build --target web --out-dir pkg --no-default-features --features web
 python3 -m http.server 8080

@@ -21,13 +21,19 @@ pub fn process_task(input: TaskInput) -> TaskOutput {
     }
 }
 
+// Экспортируем пул и типы
+pub mod worker_pool;
+pub use worker_pool::WorkerPool;
+
+// ================
+// WASM: экспорт для вызова из JS (опционально)
+// ================
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::*;
-    use js_sys::Promise;
     use serde_wasm_bindgen::{from_value, to_value};
     use wasm_bindgen::prelude::*;
-    use wasm_bindgen_futures::future_to_promise;
+    use wasm_bindgen_futures::{future_to_promise, JsFuture};
 
     #[wasm_bindgen]
     pub fn run_task(input_js: JsValue) -> Promise {
@@ -41,6 +47,6 @@ mod wasm {
 
     #[wasm_bindgen(start)]
     pub fn main() {
-        console_error_panic_hook::set_once();
+        // Можно добавить panic hook для отладки
     }
 }
