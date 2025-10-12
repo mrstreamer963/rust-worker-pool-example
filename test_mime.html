@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Тест MIME-типов</title>
+</head>
+
+<body>
+    <h1>Тестирование MIME-типов для WASM</h1>
+    <p>Проверьте вкладку Network/Сеть в инструментах разработчика (DevTools)</p>
+    <p>Файл pkg-web/worker_pool_demo_bg.wasm должен иметь MIME-тип: application/wasm</p>
+
+    <script>
+        // Просто загружаем WASM файл, чтобы увидеть его в Network вкладке
+        fetch('./pkg-web/worker_pool_demo_bg.wasm')
+            .then(response => {
+                console.log('Статус загрузки WASM:', response.status);
+                console.log('MIME-тип WASM:', response.headers.get('content-type'));
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки WASM:', err);
+            });
+    </script>
+</body>
+
+</html>
