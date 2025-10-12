@@ -25,6 +25,7 @@ pub fn process_task(input: TaskInput) -> TaskOutput {
 #[cfg(target_arch = "wasm32")]
 mod wasm_exports {
     use super::*;
+    use js_sys::Promise;
     use serde_wasm_bindgen::{from_value, to_value};
     use wasm_bindgen::prelude::*;
     use wasm_bindgen_futures::future_to_promise;
