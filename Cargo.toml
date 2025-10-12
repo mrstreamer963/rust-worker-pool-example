@@ -1,0 +1,22 @@
+[package]
+name = "worker-pool-demo"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+# Нативные зависимости (по умолчанию)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "sync"] }
+rayon = { version = "1.10" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console", "Document", "Window", "Worker"] }
+serde-wasm-bindgen = "0.6"

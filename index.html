@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Unified Worker Pool (Rust)</title>
+</head>
+
+<body>
+    <h2>Worker Pool Demo</h2>
+    <button id="run">Run 6 Tasks via Rust WorkerPool</button>
+    <pre id="output" style="background:#f8f8f8; padding:12px; margin-top:10px;"></pre>
+
+    <script type="module">
+        import init from './pkg/worker_pool_demo.js';
+
+        async function run() {
+            await init();
+
+            const tasks = Array.from({ length: 6 }, (_, i) => ({
+                id: i + 1,
+                payload: `browser-task-${i + 1}`
+            }));
+
+            // Импортируем JS-пул (Rust-пул вызывает его через wasm-bindgen)
+            const { WorkerPool } = await import('./worker_pool.js');
+            const pool = new WorkerPool('./worker.js', 3);
+
+            try {
+                const results = await pool.runTasksBatch(tasks);
+                document.getElementById('output').textContent =
+                    `✅ Completed ${results.length} tasks:\n` +
+                    JSON.stringify(results, null, 2);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('output').textContent = '❌ Error: ' + err.message;
+            }
+        }
+
+        document.getElementById('run').onclick = run;
+    </script>
+</body>
+
+</html>
