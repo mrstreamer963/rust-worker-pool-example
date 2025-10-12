@@ -1,6 +1,6 @@
 use crate::{TaskInput, TaskOutput};
 
-#[cfg(feature = "web")]
+#[cfg(target_arch = "wasm32")]
 mod wasm_js {
     use wasm_bindgen::prelude::*;
 
@@ -17,12 +17,12 @@ mod wasm_js {
     }
 }
 
-#[cfg(feature = "web")]
+#[cfg(target_arch = "wasm32")]
 pub struct WebWorkerPool {
     js_pool: std::sync::Arc<wasm_js::WorkerPoolJs>,
 }
 
-#[cfg(feature = "web")]
+#[cfg(target_arch = "wasm32")]
 impl WebWorkerPool {
     pub fn new(size: usize) -> Self {
         let worker_url = "./worker.js";

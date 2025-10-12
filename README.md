@@ -6,5 +6,5 @@
 
 ### Для браузера (WASM):
 ```bash
-wasm-pack build --target web --out-dir pkg --no-default-features --features web
+wasm-pack build --target web --out-dir pkg
 python3 -m http.server 8080
