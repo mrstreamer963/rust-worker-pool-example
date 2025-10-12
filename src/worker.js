@@ -1,5 +1,5 @@
 // worker.js
-import init, { run_task } from './pkg/worker_pool_demo.js';
+import init, { run_task } from '../pkg/worker_pool_demo.js';
 
 let initialized = false;
 

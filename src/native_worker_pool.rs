@@ -1,5 +1,3 @@
-use crate::{TaskInput, TaskOutput};
-
 #[cfg(not(target_arch = "wasm32"))]
 pub struct NativeWorkerPool {
     _size: usize,
@@ -15,7 +13,7 @@ impl NativeWorkerPool {
         Self { _size: size }
     }
 
-    pub async fn run_tasks(&self, inputs: Vec<TaskInput>) -> Vec<TaskOutput> {
+    pub async fn run_tasks(&self, inputs: Vec<crate::TaskInput>) -> Vec<crate::TaskOutput> {
         use tokio::task;
         let handles: Vec<_> = inputs
             .into_iter()
