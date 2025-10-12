@@ -44,5 +44,7 @@ mod wasm_exports {
     pub fn main() {}
 }
 
+pub mod native_worker_pool;
+pub mod web_worker_pool;
 pub mod worker_pool;
 pub use worker_pool::WorkerPool;
