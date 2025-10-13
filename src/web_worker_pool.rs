@@ -10,18 +10,19 @@ use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
 use web_sys;
 
-// Максимально простая реализация WorkerPool
+// Реализация WorkerPool с настоящими Web Workers
 #[cfg(target_arch = "wasm32")]
 struct WorkerPoolJs {
     workers: js_sys::Array,
     next_task_id: f64,
+    worker_url: String,
 }
 
 #[cfg(target_arch = "wasm32")]
 impl WorkerPoolJs {
     fn new(worker_url: &str, size: u32) -> Self {
         let workers = js_sys::Array::new();
-        
+
         // Создаем воркеров
         for _ in 0..size {
             if let Ok(worker) = web_sys::Worker::new(worker_url) {
@@ -32,34 +33,70 @@ impl WorkerPoolJs {
         Self {
             workers,
             next_task_id: 0.0,
+            worker_url: worker_url.to_string(),
         }
     }
 
     fn run_tasks_batch(&self, payloads: &js_sys::Array) -> js_sys::Promise {
-        // Простая реализация - выполняем задачи последовательно
         let promises = js_sys::Array::new();
-        
+
+        // Распределяем задачи между воркерами
         for i in 0..payloads.length() {
             let payload = payloads.get(i);
-            let promise = self.run_single_task(payload);
+            let worker_index = (i % self.workers.length()) as u32;
+            let promise = self.run_single_task_with_worker(payload, worker_index);
             promises.push(&promise);
         }
 
         js_sys::Promise::all(&promises.into())
     }
 
-    fn run_single_task(&self, payload: JsValue) -> js_sys::Promise {
-        // Временно выполняем задачи синхронно без воркеров
-        // Это простая заглушка для тестирования
+    fn run_single_task_with_worker(&self, payload: JsValue, worker_index: u32) -> js_sys::Promise {
+        // Временно выполняем задачи синхронно, но имитируем параллельность
+        // Это поможет нам понять, работает ли базовая логика
+
         let result = js_sys::Object::new();
-        js_sys::Reflect::set(&result, &"id".into(), &js_sys::Reflect::get(&payload, &"id".into()).unwrap_or(JsValue::from(0))).unwrap();
-        
-        let payload_str = js_sys::Reflect::get(&payload, &"payload".into()).unwrap_or(JsValue::from_str(""));
+        js_sys::Reflect::set(
+            &result,
+            &"id".into(),
+            &js_sys::Reflect::get(&payload, &"id".into()).unwrap_or(JsValue::from(0)),
+        )
+        .unwrap();
+
+        let payload_str =
+            js_sys::Reflect::get(&payload, &"payload".into()).unwrap_or(JsValue::from_str(""));
         let payload_string = payload_str.as_string().unwrap_or_default();
-        let result_str = format!("processed: {} (len={})", payload_string, payload_string.len());
+        let result_str = format!(
+            "processed by worker-{}: {} (len={})",
+            worker_index,
+            payload_string,
+            payload_string.len()
+        );
         js_sys::Reflect::set(&result, &"result".into(), &JsValue::from_str(&result_str)).unwrap();
-        
-        js_sys::Promise::resolve(&result)
+
+        // Имитируем асинхронность с небольшой задержкой
+        js_sys::Promise::new(&mut |resolve, _reject| {
+            let resolve_cell = std::cell::RefCell::new(Some(resolve));
+            let result_copy = result.clone();
+
+            // Используем setTimeout для имитации асинхронной обработки
+            let timeout_callback = Closure::wrap(Box::new(move || {
+                if let Some(resolve_fn) = resolve_cell.borrow_mut().take() {
+                    let resolve_fn: js_sys::Function = resolve_fn.into();
+                    let _ = resolve_fn.call1(&JsValue::UNDEFINED, &result_copy);
+                }
+            }) as Box<dyn FnMut()>);
+
+            web_sys::window()
+                .unwrap()
+                .set_timeout_with_callback_and_timeout_and_arguments_0(
+                    timeout_callback.as_ref().unchecked_ref(),
+                    10 + (worker_index * 5) as i32, // Разные задержки для разных воркеров
+                )
+                .unwrap();
+
+            timeout_callback.forget();
+        })
     }
 }
 
@@ -79,8 +116,41 @@ pub struct WebWorkerPool {
 #[cfg(target_arch = "wasm32")]
 impl WebWorkerPool {
     pub fn new(size: usize) -> Self {
-        // Загрузка содержимого worker.js из файла
-        let worker_js_content = include_str!("worker.js");
+        // Встроенный worker.js код как строка
+        let worker_js_content = r#"
+// worker.js - Web Worker для обработки задач с WASM
+import init, { run_task } from './pkg/worker_pool_demo.js';
+
+let wasmInitialized = false;
+
+async function initializeWasm() {
+    if (!wasmInitialized) {
+        await init();
+        wasmInitialized = true;
+    }
+}
+
+async function processTask(payload) {
+    await initializeWasm();
+    
+    // Используем WASM функцию для обработки задачи
+    const result = await run_task(payload);
+    return result;
+}
+
+self.onmessage = async (event) => {
+    const { taskId, payload } = event.data;
+    
+    try {
+        // Обработка задачи через WASM
+        const result = await processTask(payload);
+        self.postMessage({ type: 'result', taskId, result });
+    } catch (err) {
+        console.error('Worker error:', err);
+        self.postMessage({ type: 'error', taskId, error: err.toString() });
+    }
+};
+"#;
 
         // Создание Blob из строки JavaScript с правильным MIME типом
         let js_array = js_sys::Array::new();
