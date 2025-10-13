@@ -2,6 +2,9 @@
 name = "worker-pool-demo"
 version = "0.1.0"
 edition = "2021"
+description = "Rust worker pool demo for native and WebAssembly targets"
+repository = "https://github.com/mrstreamer963/rust-worker-pool-example"
+license = "GPL-3.0-or-later"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
