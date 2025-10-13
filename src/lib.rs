@@ -69,7 +69,5 @@ mod wasm_exports {
     }
 }
 
-pub mod native_worker;
-pub mod web_worker;
 pub mod worker_pool;
 pub use worker_pool::WorkerPool;
