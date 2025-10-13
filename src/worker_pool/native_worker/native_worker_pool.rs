@@ -1,11 +1,13 @@
+use crate::worker_pool::WorkerPoolTrait;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub struct NativeWorkerPool {
     _size: usize,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl NativeWorkerPool {
-    pub fn new(size: usize) -> Self {
+impl WorkerPoolTrait for NativeWorkerPool {
+    fn new(size: usize) -> Self {
         rayon::ThreadPoolBuilder::new()
             .num_threads(size)
             .build_global()
@@ -13,7 +15,7 @@ impl NativeWorkerPool {
         Self { _size: size }
     }
 
-    pub async fn run_tasks(&self, inputs: Vec<crate::TaskInput>) -> Vec<crate::TaskOutput> {
+    async fn run_tasks(&self, inputs: Vec<crate::TaskInput>) -> Vec<crate::TaskOutput> {
         use tokio::task;
         let handles: Vec<_> = inputs
             .into_iter()

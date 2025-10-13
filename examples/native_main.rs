@@ -1,5 +1,5 @@
 use tokio::runtime::Runtime;
-use worker_pool_demo::{TaskInput, WorkerPool};
+use worker_pool_demo::{TaskInput, WorkerPool, WorkerPoolTrait};
 
 fn main() {
     let rt = Runtime::new().expect("Failed to create Tokio runtime");

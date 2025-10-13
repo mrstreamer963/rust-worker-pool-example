@@ -155,3 +155,17 @@ impl WebWorkerPool {
         serde_wasm_bindgen::from_value(js_result).expect("Failed to deserialize results")
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+impl crate::worker_pool::WorkerPoolTrait for WebWorkerPool {
+    fn new(size: usize) -> Self {
+        Self::new(size)
+    }
+
+    fn run_tasks<'a>(
+        &'a self,
+        inputs: Vec<crate::TaskInput>,
+    ) -> impl std::future::Future<Output = Vec<crate::TaskOutput>> + Send + 'a {
+        async move { self.run_tasks(inputs).await }
+    }
+}

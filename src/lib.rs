@@ -26,4 +26,4 @@ pub fn process_task(input: TaskInput) -> TaskOutput {
 mod wasm_exports;
 
 pub mod worker_pool;
-pub use worker_pool::WorkerPool;
+pub use worker_pool::{WorkerPool, WorkerPoolTrait};
