@@ -12,7 +12,7 @@
     <pre id="output" style="background:#f8f8f8; padding:12px; margin-top:10px;"></pre>
 
     <script type="module">
-        import init from './pkg/worker_pool_demo.js';
+        import init, { WebWorkerPoolWrapper } from './pkg/worker_pool_demo.js';
 
         async function run() {
             await init();
@@ -22,12 +22,11 @@
                 payload: `browser-task-${i + 1}`
             }));
 
-            // Импортируем JS-пул (Rust-пул вызывает его через wasm-bindgen)
-            const { WorkerPool } = await import('./worker_pool.js');
-            const pool = new WorkerPool('./worker.js', 3);
+            // Используем Rust WebWorkerPool с встроенным worker.js
+            const pool = new WebWorkerPoolWrapper(3);
 
             try {
-                const results = await pool.runTasksBatch(tasks);
+                const results = await pool.run_tasks(tasks);
                 document.getElementById('output').textContent =
                     `✅ Completed ${results.length} tasks:\n` +
                     JSON.stringify(results, null, 2);

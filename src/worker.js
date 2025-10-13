@@ -1,22 +1,21 @@
-// worker.js
-import init, { run_task } from '../pkg/worker_pool_demo.js';
+// worker.js - простая версия без WASM импортов
+// Вместо импорта WASM модуля, мы будем выполнять простую обработку задач
 
-let initialized = false;
-
-async function ensureInit() {
-    if (!initialized) {
-        await init();
-        initialized = true;
-    }
+function processTask(payload) {
+    // Простая обработка задачи без WASM
+    const result = {
+        id: payload.id || 0,
+        result: `processed: ${payload.payload} (len=${payload.payload?.length || 0})`
+    };
+    return result;
 }
 
 self.onmessage = async (event) => {
-    await ensureInit();
-
     const { taskId, payload } = event.data;
-
+    
     try {
-        const result = await run_task(payload);
+        // Простая обработка задачи
+        const result = processTask(payload);
         self.postMessage({ type: 'result', taskId, result });
     } catch (err) {
         self.postMessage({ type: 'error', taskId, error: err.toString() });

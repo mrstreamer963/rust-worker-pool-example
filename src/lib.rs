@@ -42,6 +42,27 @@ mod wasm_exports {
 
     #[wasm_bindgen(start)]
     pub fn main() {}
+
+    #[wasm_bindgen]
+    pub struct WebWorkerPoolWrapper {
+        pool: crate::web_worker_pool::WebWorkerPool,
+    }
+
+    #[wasm_bindgen]
+    impl WebWorkerPoolWrapper {
+        #[wasm_bindgen(constructor)]
+        pub fn new(size: usize) -> Self {
+            Self {
+                pool: crate::web_worker_pool::WebWorkerPool::new(size),
+            }
+        }
+
+        pub async fn run_tasks(&self, inputs: JsValue) -> JsValue {
+            let inputs: Vec<TaskInput> = from_value(inputs).unwrap();
+            let results = self.pool.run_tasks(inputs).await;
+            to_value(&results).unwrap()
+        }
+    }
 }
 
 pub mod native_worker_pool;

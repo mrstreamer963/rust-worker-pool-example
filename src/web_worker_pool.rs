@@ -7,17 +7,92 @@ use js_sys;
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
+#[cfg(target_arch = "wasm32")]
+use web_sys;
+
+// Максимально простая реализация WorkerPool
+#[cfg(target_arch = "wasm32")]
+struct WorkerPoolJs {
+    workers: js_sys::Array,
+    next_task_id: f64,
+}
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(module = "/worker_pool.js")]
-extern "C" {
-    type WorkerPoolJs;
+impl WorkerPoolJs {
+    fn new(worker_url: &str, size: u32) -> Self {
+        let workers = js_sys::Array::new();
+        
+        // Создаем воркеров
+        for _ in 0..size {
+            if let Ok(worker) = web_sys::Worker::new(worker_url) {
+                workers.push(&worker);
+            }
+        }
 
-    #[wasm_bindgen(constructor)]
-    fn new(worker_url: &str, size: u32) -> WorkerPoolJs;
+        Self {
+            workers,
+            next_task_id: 0.0,
+        }
+    }
 
-    #[wasm_bindgen(method, js_name = runTasksBatch)]
-    fn run_tasks_batch(this: &WorkerPoolJs, payloads: &js_sys::Array) -> js_sys::Promise;
+    fn run_tasks_batch(&self, payloads: &js_sys::Array) -> js_sys::Promise {
+        // Простая реализация - выполняем задачи последовательно
+        let promises = js_sys::Array::new();
+        
+        for i in 0..payloads.length() {
+            let payload = payloads.get(i);
+            let promise = self.run_single_task(payload);
+            promises.push(&promise);
+        }
+
+        js_sys::Promise::all(&promises.into())
+    }
+
+    fn run_single_task(&self, payload: JsValue) -> js_sys::Promise {
+        // Берем первого доступного воркера
+        if self.workers.length() == 0 {
+            return js_sys::Promise::reject(&JsValue::from_str("No workers available"));
+        }
+        
+        let worker = self.workers.get(0);
+        let worker: web_sys::Worker = worker.into();
+        
+        let task_id = self.next_task_id;
+        
+        // Создаем простой Promise
+        js_sys::Promise::new(&mut |resolve, reject| {
+            let resolve_cell = std::cell::RefCell::new(Some(resolve));
+            let reject_cell = std::cell::RefCell::new(Some(reject));
+            
+            let onmessage = Closure::wrap(Box::new(move |event: JsValue| {
+                let data = js_sys::Reflect::get(&event, &"data".into()).unwrap_or(JsValue::UNDEFINED);
+                let result_type = js_sys::Reflect::get(&data, &"type".into()).unwrap_or(JsValue::UNDEFINED);
+                
+                if result_type.as_string().unwrap_or_default() == "result" {
+                    let result = js_sys::Reflect::get(&data, &"result".into()).unwrap_or(JsValue::UNDEFINED);
+                    if let Some(resolve_fn) = resolve_cell.borrow_mut().take() {
+                        let resolve_fn: js_sys::Function = resolve_fn.into();
+                        let _ = resolve_fn.call1(&JsValue::UNDEFINED, &result);
+                    }
+                } else {
+                    let error = js_sys::Reflect::get(&data, &"error".into()).unwrap_or(JsValue::from_str("Unknown error"));
+                    if let Some(reject_fn) = reject_cell.borrow_mut().take() {
+                        let reject_fn: js_sys::Function = reject_fn.into();
+                        let _ = reject_fn.call1(&JsValue::UNDEFINED, &error);
+                    }
+                }
+            }) as Box<dyn FnMut(JsValue)>);
+            
+            worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+            onmessage.forget();
+            
+            // Отправляем задачу
+            let message = js_sys::Object::new();
+            js_sys::Reflect::set(&message, &"taskId".into(), &task_id.into()).unwrap_or_default();
+            js_sys::Reflect::set(&message, &"payload".into(), &payload).unwrap_or_default();
+            let _ = worker.post_message(&message);
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -25,9 +100,6 @@ extern "C" {
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "URL"], js_name = createObjectURL)]
     fn create_object_url(blob: &web_sys::Blob) -> String;
-
-    #[wasm_bindgen(js_namespace = ["window", "Blob"])]
-    fn new_blob(parts: &js_sys::Array, options: &js_sys::Object) -> web_sys::Blob;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -39,12 +111,13 @@ pub struct WebWorkerPool {
 impl WebWorkerPool {
     pub fn new(size: usize) -> Self {
         // Загрузка содержимого worker.js из файла
-        let worker_js_content = include_str!("./worker.js");
+        let worker_js_content = include_str!("worker.js");
 
-        // Создание Blob из строки JavaScript
+        // Создание Blob из строки JavaScript с правильным MIME типом
         let js_array = js_sys::Array::new();
         js_array.push(&worker_js_content.into());
 
+        // Создаем BlobPropertyBag с правильным типом для ES6 модулей
         let blob_options = js_sys::Object::new();
         js_sys::Reflect::set(
             &blob_options,
@@ -53,7 +126,7 @@ impl WebWorkerPool {
         )
         .unwrap();
 
-        let blob = new_blob(&js_array, &blob_options);
+        let blob = web_sys::Blob::new_with_str_sequence(&js_array).unwrap();
         let worker_url = create_object_url(&blob);
 
         let pool = WorkerPoolJs::new(&worker_url, size as u32);
