@@ -9,34 +9,98 @@
 <body>
     <h2>Worker Pool Demo</h2>
     <button id="run">Run 6 Tasks via Rust WorkerPool</button>
+    <button id="test">Test Basic Functionality</button>
     <pre id="output" style="background:#f8f8f8; padding:12px; margin-top:10px;"></pre>
+    <pre id="debug" style="background:#e8f4f8; padding:12px; margin-top:10px; color:#333;"></pre>
 
     <script type="module">
-        import init, { WebWorkerPoolWrapper } from './pkg/worker_pool_demo.js';
+        let wasmModule = null;
+        
+        function log(message) {
+            const debugElement = document.getElementById('debug');
+            const timestamp = new Date().toLocaleTimeString();
+            debugElement.textContent += `[${timestamp}] ${message}\n`;
+            console.log(`[${timestamp}] ${message}`);
+        }
 
-        async function run() {
-            await init();
+        function updateOutput(message) {
+            document.getElementById('output').textContent = message;
+            log(`Output updated: ${message.substring(0, 100)}...`);
+        }
 
-            const tasks = Array.from({ length: 6 }, (_, i) => ({
-                id: i + 1,
-                payload: `browser-task-${i + 1}`
-            }));
-
-            // Используем Rust WebWorkerPool с встроенным worker.js
-            const pool = new WebWorkerPoolWrapper(3);
-
+        async function testBasicFunctionality() {
+            log('Starting basic functionality test...');
+            updateOutput('Testing basic functionality...');
+            
             try {
-                const results = await pool.run_tasks(tasks);
-                document.getElementById('output').textContent =
-                    `✅ Completed ${results.length} tasks:\n` +
-                    JSON.stringify(results, null, 2);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('output').textContent = '❌ Error: ' + err.message;
+                log('Attempting to import WASM module...');
+                const module = await import('./pkg/worker_pool_demo.js');
+                log('WASM module imported successfully');
+                
+                log('Attempting to initialize WASM...');
+                await module.default();
+                log('WASM initialized successfully');
+                
+                updateOutput('✅ Basic functionality test passed! WASM module loaded and initialized.');
+                wasmModule = module;
+                
+            } catch (error) {
+                log(`Error during basic test: ${error.message}`);
+                updateOutput(`❌ Basic functionality test failed: ${error.message}`);
+                console.error('Full error:', error);
             }
         }
 
+        async function run() {
+            log('Run button clicked');
+            updateOutput('Starting worker pool tasks...');
+            
+            try {
+                if (!wasmModule) {
+                    log('WASM module not loaded, loading now...');
+                    wasmModule = await import('./pkg/worker_pool_demo.js');
+                    await wasmModule.default();
+                    log('WASM module loaded and initialized');
+                }
+
+                const tasks = Array.from({ length: 6 }, (_, i) => ({
+                    id: i + 1,
+                    payload: `browser-task-${i + 1}`
+                }));
+
+                log(`Created ${tasks.length} tasks: ${JSON.stringify(tasks)}`);
+
+                // Используем Rust WebWorkerPool с встроенным worker.js
+                log('Creating WebWorkerPoolWrapper with size 3...');
+                const pool = new wasmModule.WebWorkerPoolWrapper(3);
+                log('WebWorkerPoolWrapper created successfully');
+
+                log('About to call pool.run_tasks...');
+                updateOutput('Executing tasks in worker pool...');
+                
+                const results = await pool.run_tasks(tasks);
+                log(`Tasks completed, got ${results.length} results`);
+                log(`Results: ${JSON.stringify(results)}`);
+                
+                updateOutput(
+                    `✅ Completed ${results.length} tasks:\n` +
+                    JSON.stringify(results, null, 2)
+                );
+                
+            } catch (err) {
+                log(`Error in run function: ${err.message}`);
+                log(`Error stack: ${err.stack}`);
+                updateOutput('❌ Error: ' + err.message);
+                console.error('Full error:', err);
+            }
+        }
+
+        // Event listeners
         document.getElementById('run').onclick = run;
+        document.getElementById('test').onclick = testBasicFunctionality;
+        
+        // Initial log
+        log('Page loaded, event listeners attached');
     </script>
 </body>
 

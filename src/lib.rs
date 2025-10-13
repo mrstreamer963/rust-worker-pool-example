@@ -57,10 +57,14 @@ mod wasm_exports {
             }
         }
 
-        pub async fn run_tasks(&self, inputs: JsValue) -> JsValue {
-            let inputs: Vec<TaskInput> = from_value(inputs).unwrap();
-            let results = self.pool.run_tasks(inputs).await;
-            to_value(&results).unwrap()
+        pub fn run_tasks(&self, inputs: JsValue) -> Promise {
+            let pool = self.pool.clone();
+            future_to_promise(async move {
+                let inputs: Vec<TaskInput> = from_value(inputs)
+                    .map_err(|e| JsValue::from_str(&format!("Deserialize error: {:?}", e)))?;
+                let results = pool.run_tasks(inputs).await;
+                Ok(to_value(&results).unwrap())
+            })
         }
     }
 }
