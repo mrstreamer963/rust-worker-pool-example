@@ -116,45 +116,12 @@ pub struct WebWorkerPool {
 #[cfg(target_arch = "wasm32")]
 impl WebWorkerPool {
     pub fn new(size: usize) -> Self {
-        // Встроенный worker.js код как строка
-        let worker_js_content = r#"
-// worker.js - Web Worker для обработки задач с WASM
-import init, { run_task } from './pkg/worker_pool_demo.js';
-
-let wasmInitialized = false;
-
-async function initializeWasm() {
-    if (!wasmInitialized) {
-        await init();
-        wasmInitialized = true;
-    }
-}
-
-async function processTask(payload) {
-    await initializeWasm();
-    
-    // Используем WASM функцию для обработки задачи
-    const result = await run_task(payload);
-    return result;
-}
-
-self.onmessage = async (event) => {
-    const { taskId, payload } = event.data;
-    
-    try {
-        // Обработка задачи через WASM
-        const result = await processTask(payload);
-        self.postMessage({ type: 'result', taskId, result });
-    } catch (err) {
-        console.error('Worker error:', err);
-        self.postMessage({ type: 'error', taskId, error: err.toString() });
-    }
-};
-"#;
+        // Загружаем содержимое worker.js из файла во время компиляции
+        let worker_js_content = include_str!("../worker.js");
 
         // Создание Blob из строки JavaScript с правильным MIME типом
         let js_array = js_sys::Array::new();
-        js_array.push(&worker_js_content.into());
+        js_array.push(&JsValue::from_str(worker_js_content));
 
         // Создаем BlobPropertyBag с правильным типом для ES6 модулей
         let blob_options = js_sys::Object::new();
