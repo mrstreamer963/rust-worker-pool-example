@@ -117,7 +117,7 @@ pub struct WebWorkerPool {
 impl WebWorkerPool {
     pub fn new(size: usize) -> Self {
         // Загружаем содержимое worker.js из файла во время компиляции
-        let worker_js_content = include_str!("worker.js");
+        let worker_js_content = include_str!("./worker.js");
 
         // Создание Blob из строки JavaScript с правильным MIME типом
         let js_array = js_sys::Array::new();

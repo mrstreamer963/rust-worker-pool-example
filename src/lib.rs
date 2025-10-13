@@ -45,7 +45,7 @@ mod wasm_exports {
 
     #[wasm_bindgen]
     pub struct WebWorkerPoolWrapper {
-        pool: crate::web_worker_pool::WebWorkerPool,
+        pool: crate::web_worker::WebWorkerPool,
     }
 
     #[wasm_bindgen]
@@ -53,7 +53,7 @@ mod wasm_exports {
         #[wasm_bindgen(constructor)]
         pub fn new(size: usize) -> Self {
             Self {
-                pool: crate::web_worker_pool::WebWorkerPool::new(size),
+                pool: crate::web_worker::WebWorkerPool::new(size),
             }
         }
 
@@ -70,6 +70,6 @@ mod wasm_exports {
 }
 
 pub mod native_worker_pool;
-pub mod web_worker_pool;
+pub mod web_worker;
 pub mod worker_pool;
 pub use worker_pool::WorkerPool;
